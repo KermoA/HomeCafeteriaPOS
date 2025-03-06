@@ -1,0 +1,185 @@
+﻿@page "/"
+@using Microsoft.AspNetCore.SignalR.Client
+@using global::HomeCafeteriaPOS.Frontend.Models
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+
+
+<div class="container py-4">
+    <h1 class="mb-4 text-center">Product Catalog</h1>
+
+    <!-- Product Table -->
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Name</th>
+                    <th>Price</th>
+                    <th>Stock Quantity</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (products?.Count > 0)
+                {
+                    @foreach (var product in products)
+                    {
+                        <tr>
+                            <td>@product.Name</td>
+                            <td>@product.Price.ToString("C")</td>
+                            <td>@product.StockQuantity</td>
+                            <td class="text-center">
+                                <button @onclick="() => EditProduct(product)" class="btn btn-sm btn-warning me-2">
+                                    <i class="bi bi-pencil-square"></i> Edit
+                                </button>
+                                <button @onclick="() => DeleteProduct(product.ProductId)" class="btn btn-sm btn-danger">
+                                    <i class="bi bi-trash"></i> Delete
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">No products available</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Add/Edit Product Form -->
+    <div class="mt-5">
+        <h2 class="text-center">@((editingProduct.ProductId == 0) ? "Add Product" : "Edit Product")</h2>
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <ProductForm EditingProduct="@editingProduct" OnSave="SaveProduct" OnCancel="CancelEdit" />
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code {
+    private List<Product>
+    products = new();
+    private Product editingProduct = new Product();
+    private HubConnection? hubConnection;
+
+    private async Task LogToBrowserConsole(string message)
+    {
+    await JSRuntime.InvokeVoidAsync("console.log", message);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+    await LogToBrowserConsole("Initializing component...");
+
+    // Load products from the API
+    products = await Http.GetFromJsonAsync<List<Product>>("https://localhost:7228/api/products");
+        await LogToBrowserConsole($"Loaded {products.Count} products.");
+
+        // Setup SignalR connection
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl("https://localhost:7228/productHub")
+            .Build();
+        await LogToBrowserConsole("SignalR connection established.");
+
+        hubConnection.On<Product>("ReceiveProductUpdate", async product =>
+        {
+            await LogToBrowserConsole($"Received product update for: {product.Name}");
+            HandleProductUpdate(product);
+        });
+
+        hubConnection.On<int>("ProductDeleted", async productId =>
+        {
+            await LogToBrowserConsole($"Product deleted with ID: {productId}");
+            HandleProductDeletion(productId);
+        });
+
+        await hubConnection.StartAsync();
+        await LogToBrowserConsole("SignalR connection started.");
+    }
+
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+
+    private void HandleProductUpdate(Product product)
+    {
+        var existing = products.FirstOrDefault(p => p.ProductId == product.ProductId);
+        if (existing != null)
+        {
+            existing.Name = product.Name;
+            existing.Price = product.Price;
+            existing.StockQuantity = product.StockQuantity;
+        }
+        else
+        {
+            Console.WriteLine("Products before add:" );
+            products.Add(product);
+        }
+        StateHasChanged();
+    }
+
+    private void HandleProductDeletion(int productId)
+    {
+        var product = products.FirstOrDefault(p => p.ProductId == productId);
+        if (product != null)
+        {
+            products.Remove(product);
+        }
+        StateHasChanged();
+    }
+
+    private async Task SaveProduct()
+    {
+        if (editingProduct.ProductId == 0)
+        {
+            var response = await Http.PostAsJsonAsync("https://localhost:7228/api/products", editingProduct);
+            var newProduct = await response.Content.ReadFromJsonAsync<Product>();
+            if (newProduct != null)
+            {
+                Console.WriteLine("Products before save:");
+               // products.Add(newProduct);
+            }
+        }
+        else
+        {
+            await Http.PutAsJsonAsync($"https://localhost:7228/api/products/{editingProduct.ProductId}", editingProduct);
+        }
+        ResetForm();
+    }
+
+    private void EditProduct(Product product)
+    {
+        editingProduct = new Product
+            {
+                ProductId = product.ProductId,
+                Name = product.Name,
+                Price = product.Price,
+                StockQuantity = product.StockQuantity
+            };
+    }
+
+    private async Task DeleteProduct(int productId)
+    {
+        await Http.DeleteAsync($"https://localhost:7228/api/products/{productId}");
+    }
+
+    private void CancelEdit()
+    {
+        ResetForm();
+    }
+
+    private void ResetForm()
+    {
+        editingProduct = new Product();
+    }
+}

@@ -1,6 +1,8 @@
 ﻿using HomeCafeteriaPOS.Data;
+using HomeCafeteriaPOS.Hubs;
 using HomeCafeteriaPOS.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace HomeCafeteriaPOS.Controllers
@@ -10,10 +12,12 @@ namespace HomeCafeteriaPOS.Controllers
     public class ProductsController : ControllerBase
     {
         private readonly HomeCafeteriaDbContext _context;
+        private readonly IHubContext<ProductHub> _hubContext;
 
-        public ProductsController(HomeCafeteriaDbContext context)
+        public ProductsController(HomeCafeteriaDbContext context, IHubContext<ProductHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         [HttpGet]
@@ -36,6 +40,7 @@ namespace HomeCafeteriaPOS.Controllers
         {
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ReceiveProductUpdate", product);
             return CreatedAtAction(nameof(GetProduct), new { id = product.Id }, product);
         }
 
@@ -47,6 +52,7 @@ namespace HomeCafeteriaPOS.Controllers
 
             _context.Entry(product).State = EntityState.Modified;
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ReceiveProductUpdate", product);
             return NoContent();
         }
 
@@ -59,6 +65,7 @@ namespace HomeCafeteriaPOS.Controllers
 
             _context.Products.Remove(product);
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ProductDeleted", id);
             return NoContent();
         }
     }

@@ -1,0 +1,265 @@
+﻿@page "/pos"
+@using Microsoft.AspNetCore.SignalR.Client
+@using HomeCafeteriaPOS.Client.Models
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+
+<div class="container py-4">
+    <h1 class="text-center mb-4">POS - Point of Sale</h1>
+
+    <!-- Product List -->
+    <div class="row">
+        @foreach (var product in products)
+        {
+            <div class="col-md-3 mb-4">
+                <div class="card">
+                    <img src="@product.ImageUrl" class="card-img-top" alt="@product.Name"
+                         style="@(product.Quantity == 0 ? "filter: grayscale(100%);" : "")"
+                         @onclick="() => AddToCart(product)"
+                         x-ms-playtodisabled="@(product.Quantity > 0)"/>
+                    <div class="card-body">
+                        <h5 class="card-title">@product.Name</h5>
+                        <p class="card-text">@product.Price.ToString("C")</p>
+                        <p class="card-text">Stock: @product.Quantity</p>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Cart List -->
+    <div class="mt-5">
+        <h3>Cart</h3>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                    <th>Total</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (cartItems.Count > 0)
+                {
+                    @foreach (var item in cartItems)
+                    {
+                        <tr>
+                            <td>@item.Product.Name</td>
+                            <td>@item.Product.Price.ToString("C")</td>
+                            <td>@item.Quantity</td>
+                            <td>@(item.Product.Price * item.Quantity).ToString("C")</td>
+                            <td>
+                                <button @onclick="() => RemoveFromCart(item)" class="btn btn-sm btn-danger">Remove</button>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">No items in the cart</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Total Amount and Checkout -->
+    <div class="mt-4 text-center">
+        <h3>Total: @totalAmount.ToString("C")</h3>
+        <button class="btn btn-warning" @onclick="ResetCart">Reset</button>
+        <button class="btn btn-success" @onclick="ProceedToCheckout">Checkout</button>
+    </div>
+
+    <!-- Checkout Modal -->
+    <div class="modal fade" id="checkoutModal" tabindex="-1" aria-labelledby="checkoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="checkoutModalLabel">Checkout</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <h5>Total: @totalAmount.ToString("C")</h5>
+                    <div class="mb-3">
+                        <label for="paidAmount" class="form-label">Paid Amount</label>
+                        <input type="number" class="form-control" id="paidAmount" @bind="paidAmount" />
+                    </div>
+                    @if (change > 0)
+                    {
+                        <div class="mt-3">
+                            <h5>Change: @change.ToString("C")</h5>
+                            <p>Breakdown: @string.Join(", ", changeBreakdown.Select(kvp => $"{kvp.Key:C}: {kvp.Value}"))</p>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" @onclick="CompleteCheckout">Complete Checkout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Product> products = new();
+    private List<CartItem> cartItems = new();
+    private decimal totalAmount = 0;
+    private decimal paidAmount = 0;
+    private decimal change = 0;
+    private Dictionary<decimal, int> changeBreakdown = new();
+
+    private HubConnection? hubConnection;
+
+    // Get products from the API
+    protected override async Task OnInitializedAsync()
+    {
+        // Fetch initial product data
+        products = await Http.GetFromJsonAsync<List<Product>>("https://localhost:7150/api/products");
+
+        // Setup SignalR connection
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl("https://localhost:7150/productHub")
+            .Build();
+
+        // Listen for product updates from SignalR hub
+        hubConnection.On<Product>("ReceiveProductUpdate", (product) =>
+        {
+            var existingProduct = products.FirstOrDefault(p => p.Id == product.Id);
+            if (existingProduct != null)
+            {
+                existingProduct.Quantity = product.Quantity;
+                StateHasChanged(); // Force a re-render of the UI
+            }
+        });
+
+        await hubConnection.StartAsync();
+    }
+
+    private async void AddToCart(Product product)
+    {
+        // Check if there's enough stock
+        if (product.Quantity > 0)
+        {
+            // Add item to cart
+            var existingCartItem = cartItems.FirstOrDefault(c => c.Product.Id == product.Id);
+            if (existingCartItem != null)
+            {
+                existingCartItem.Quantity++;
+            }
+            else
+            {
+                cartItems.Add(new CartItem { Product = product, Quantity = 1 });
+            }
+
+            // Decrease the product quantity in the product list
+            product.Quantity--;
+
+            // Update the product in the database via the API
+            await UpdateProductQuantityOnServer(product);
+
+            // Update total amount
+            totalAmount += product.Price;
+        }
+        else
+        {
+            // Notify user if no stock available
+            await JSRuntime.InvokeVoidAsync("alert", $"Sorry, {product.Name} is out of stock.");
+        }
+    }
+
+    private async Task UpdateProductQuantityOnServer(Product product)
+    {
+        // Send the updated product quantity to the server
+        var response = await Http.PutAsJsonAsync($"https://localhost:7150/api/products/{product.Id}", product);
+        if (response.IsSuccessStatusCode)
+        {
+            // Optionally, notify the user or handle successful update
+            Console.WriteLine($"Product {product.Name} updated successfully.");
+        }
+        else
+        {
+            // Handle failure (you can show an error message to the user)
+            Console.WriteLine("Error updating product quantity.");
+        }
+    }
+
+    private void RemoveFromCart(CartItem cartItem)
+    {
+        cartItems.Remove(cartItem);
+        totalAmount -= cartItem.Product.Price * cartItem.Quantity;
+    }
+
+    private void ResetCart()
+    {
+        // Return the cart quantities back to the products
+        foreach (var cartItem in cartItems)
+        {
+            var product = products.FirstOrDefault(p => p.Id == cartItem.Product.Id);
+            if (product != null)
+            {
+                // Restore the product quantity
+                product.Quantity += cartItem.Quantity;
+
+                // Optionally, you can also send the updated product quantity to the server (if needed)
+                UpdateProductQuantityOnServer(product);
+            }
+        }
+
+        // Clear the cart
+        cartItems.Clear();
+        totalAmount = 0;
+
+        // Optionally, you can refresh the UI or show a message
+        StateHasChanged();
+    }
+
+    private void ProceedToCheckout()
+    {
+        // Show modal (you may need JavaScript for this)
+    }
+
+    private void CompleteCheckout()
+    {
+        if (paidAmount >= totalAmount)
+        {
+            change = paidAmount - totalAmount;
+            changeBreakdown = CalculateChange(change);
+            // Proceed to save the sale and complete the checkout
+        }
+        else
+        {
+            // Handle error, insufficient payment
+        }
+    }
+
+    private Dictionary<decimal, int> CalculateChange(decimal change)
+    {
+        decimal[] denominations = { 50.00m, 20.00m, 10.00m, 5.00m, 2.00m, 1.00m, 0.50m, 0.20m, 0.10m, 0.05m };
+        Dictionary<decimal, int> changeBreakdown = new();
+
+        foreach (var denom in denominations)
+        {
+            int count = (int)(change / denom);
+            if (count > 0)
+            {
+                changeBreakdown[denom] = count;
+                change -= count * denom;
+            }
+        }
+
+        return changeBreakdown;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+}
