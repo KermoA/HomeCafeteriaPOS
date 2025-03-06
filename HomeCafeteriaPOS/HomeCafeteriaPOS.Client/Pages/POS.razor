@@ -231,10 +231,13 @@
                     Items = cartItems.Select(ci => new SaleItem
                     {
                         ProductId = ci.Product.Id,
+                        ProductName = ci.Product.Name,
                         Quantity = ci.Quantity,
                         Price = ci.Product.Price
                     }).ToList(),
-                    TotalAmount = totalAmount
+                    TotalAmount = totalAmount,
+                    PaidAmount = paidAmount,
+                    Change = change
                 };
 
             var response = await Http.PostAsJsonAsync("https://localhost:7150/api/sales", sale);
@@ -252,7 +255,8 @@
             }
             else
             {
-                await JSRuntime.InvokeVoidAsync("alert", "Error saving sale!");
+                var errorResponse = await response.Content.ReadAsStringAsync();
+                await JSRuntime.InvokeVoidAsync("alert", $"Error saving sale: {errorResponse}");
             }
         }
         else

@@ -3,6 +3,7 @@ using System;
 using HomeCafeteriaPOS.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HomeCafeteriaPOS.Migrations
 {
     [DbContext(typeof(HomeCafeteriaDbContext))]
-    partial class HomeCafeteriaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250306214011_SaleModelChanged")]
+    partial class SaleModelChanged
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -90,10 +93,6 @@ namespace HomeCafeteriaPOS.Migrations
 
                     b.Property<int>("ProductId")
                         .HasColumnType("integer");
-
-                    b.Property<string>("ProductName")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");

@@ -12,6 +12,8 @@
             <th>ID</th>
             <th>Date</th>
             <th>Total Amount</th>
+            <th>Paid Amount</th>
+            <th>Change</th>
             <th>Details</th>
         </tr>
     </thead>
@@ -22,6 +24,8 @@
                 <td>@sale.Id</td>
                 <td>@sale.Date.ToLocalTime().ToString("g")</td>
                 <td>@sale.TotalAmount.ToString("C")</td>
+                <td>@sale.PaidAmount.ToString("C")</td>
+                <td>@sale.Change.ToString("C")</td>
                 <td>
                     <button class="btn btn-info" @onclick="() => ToggleSaleDetails(sale.Id)">View</button>
                 </td>
@@ -29,13 +33,19 @@
             @if (expandedSaleId == sale.Id)
             {
                 <tr>
-                    <td colspan="4">
+                    <td colspan="6">
                         <ul>
                             @foreach (var item in sale.Items)
                             {
-                                <li>@item.Quantity x Product ID: @item.ProductId - @item.Price.ToString("C")</li>
+                                <li>
+                                    @item.Quantity x @item.ProductName - @item.Price.ToString("C")
+                                    (Total: @(item.Quantity * item.Price).ToString("C"))
+                                </li>
                             }
                         </ul>
+                        <p><strong>Total Amount:</strong> @sale.TotalAmount.ToString("C")</p>
+                        <p><strong>Paid Amount:</strong> @sale.PaidAmount.ToString("C")</p>
+                        <p><strong>Change:</strong> @sale.Change.ToString("C")</p>
                     </td>
                 </tr>
             }

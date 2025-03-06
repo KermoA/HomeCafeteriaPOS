@@ -3,6 +3,7 @@ using System;
 using HomeCafeteriaPOS.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HomeCafeteriaPOS.Migrations
 {
     [DbContext(typeof(HomeCafeteriaDbContext))]
-    partial class HomeCafeteriaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250306220421_UpdateSaleItemModel")]
+    partial class UpdateSaleItemModel
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -91,10 +94,6 @@ namespace HomeCafeteriaPOS.Migrations
                     b.Property<int>("ProductId")
                         .HasColumnType("integer");
 
-                    b.Property<string>("ProductName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
 
@@ -103,6 +102,8 @@ namespace HomeCafeteriaPOS.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ProductId");
+
                     b.HasIndex("SaleId");
 
                     b.ToTable("SaleItem");
@@ -110,9 +111,17 @@ namespace HomeCafeteriaPOS.Migrations
 
             modelBuilder.Entity("HomeCafeteriaPOS.Models.SaleItem", b =>
                 {
+                    b.HasOne("HomeCafeteriaPOS.Models.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("HomeCafeteriaPOS.Models.Sale", null)
                         .WithMany("Items")
                         .HasForeignKey("SaleId");
+
+                    b.Navigation("Product");
                 });
 
             modelBuilder.Entity("HomeCafeteriaPOS.Models.Sale", b =>
