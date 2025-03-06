@@ -1,6 +1,8 @@
 ﻿using HomeCafeteriaPOS.Data;
+using HomeCafeteriaPOS.Hubs;
 using HomeCafeteriaPOS.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace HomeCafeteriaPOS.Controllers
@@ -10,10 +12,12 @@ namespace HomeCafeteriaPOS.Controllers
     public class SalesController : ControllerBase
     {
         private readonly HomeCafeteriaDbContext _context;
+        private readonly IHubContext<SaleHub> _hubContext;
 
-        public SalesController(HomeCafeteriaDbContext context)
+        public SalesController(HomeCafeteriaDbContext context, IHubContext<SaleHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         [HttpGet]
@@ -37,6 +41,7 @@ namespace HomeCafeteriaPOS.Controllers
 
             _context.Sales.Add(sale);
             await _context.SaveChangesAsync();
+            await _hubContext.Clients.All.SendAsync("ReceiveNewSale", sale);
             return CreatedAtAction(nameof(GetSales), new { id = sale.Id }, sale);
         }
     }

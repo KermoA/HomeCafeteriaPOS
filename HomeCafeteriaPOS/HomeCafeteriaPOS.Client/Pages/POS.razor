@@ -221,25 +221,43 @@
         }
     }
 
-    private void CompleteCheckout()
+    private async Task CompleteCheckout()
     {
         if (paidAmount >= totalAmount)
         {
-            change = paidAmount - totalAmount;
-            changeBreakdown = CalculateChangeBreakdown(change);
+            var sale = new Sale
+                {
+                    Date = DateTime.UtcNow,
+                    Items = cartItems.Select(ci => new SaleItem
+                    {
+                        ProductId = ci.Product.Id,
+                        Quantity = ci.Quantity,
+                        Price = ci.Product.Price
+                    }).ToList(),
+                    TotalAmount = totalAmount
+                };
 
-            cartItems.Clear();
-            paidAmount = 0;
-            change = 0;
-            totalAmount = 0;
-            changeBreakdown.Clear();
+            var response = await Http.PostAsJsonAsync("https://localhost:7150/api/sales", sale);
+            if (response.IsSuccessStatusCode)
+            {
+                cartItems.Clear();
+                paidAmount = 0;
+                change = 0;
+                totalAmount = 0;
+                changeBreakdown.Clear();
 
-            JSRuntime.InvokeVoidAsync("eval", "var modal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal')); if (modal) modal.hide();");
-            StateHasChanged();
+                await JSRuntime.InvokeVoidAsync("eval", "var modal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal')); if (modal) modal.hide();");
+
+                StateHasChanged();
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Error saving sale!");
+            }
         }
         else
         {
-            JSRuntime.InvokeVoidAsync("alert", "Insufficient payment!");
+            await JSRuntime.InvokeVoidAsync("alert", "Insufficient payment!");
         }
     }
 

@@ -42,6 +42,7 @@ namespace HomeCafeteriaPOS
             app.MapControllers();
 
             app.MapHub<ProductHub>("/productHub");
+            app.MapHub<SaleHub>("/saleHub");
 
             app.Run();
         }

@@ -1,0 +1,85 @@
+﻿@page "/sales"
+@using Microsoft.AspNetCore.SignalR.Client
+@using HomeCafeteriaPOS.Client.Models
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+
+<h1>Sales History</h1>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Date</th>
+            <th>Total Amount</th>
+            <th>Details</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var sale in sales)
+        {
+            <tr>
+                <td>@sale.Id</td>
+                <td>@sale.Date.ToLocalTime().ToString("g")</td>
+                <td>@sale.TotalAmount.ToString("C")</td>
+                <td>
+                    <button class="btn btn-info" @onclick="() => ToggleSaleDetails(sale.Id)">View</button>
+                </td>
+            </tr>
+            @if (expandedSaleId == sale.Id)
+            {
+                <tr>
+                    <td colspan="4">
+                        <ul>
+                            @foreach (var item in sale.Items)
+                            {
+                                <li>@item.Quantity x Product ID: @item.ProductId - @item.Price.ToString("C")</li>
+                            }
+                        </ul>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<Sale> sales = new(); // This will hold the list of sales
+    private HubConnection? hubConnection;
+    private int? expandedSaleId; // To track which sale is expanded
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Fetch sales from API
+        sales = await Http.GetFromJsonAsync<List<Sale>>("https://localhost:7150/api/sales");
+
+        // Set up SignalR connection
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl("https://localhost:7150/saleHub")
+            .Build();
+
+        // Listen for new sales
+        hubConnection.On<Sale>("ReceiveNewSale", (sale) =>
+        {
+            sales.Add(sale);  // Add new sale to the list
+            StateHasChanged(); // Refresh the UI
+        });
+
+        await hubConnection.StartAsync();
+    }
+
+    private void ToggleSaleDetails(int saleId)
+    {
+        // If the clicked sale is already expanded, collapse it, otherwise expand it
+        expandedSaleId = expandedSaleId == saleId ? (int?)null : saleId;
+    }
+
+    // Dispose SignalR connection when done
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+}
