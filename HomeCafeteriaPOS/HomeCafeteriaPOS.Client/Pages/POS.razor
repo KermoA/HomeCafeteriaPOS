@@ -154,10 +154,11 @@
             }
 
             product.Quantity--;
+            totalAmount += product.Price;
 
             await UpdateProductQuantityOnServer(product);
 
-            totalAmount += product.Price;
+            StateHasChanged();
         }
         else
         {
@@ -212,7 +213,7 @@
         {
             change = paidAmount - totalAmount;
             changeBreakdown = CalculateChangeBreakdown(change);
-            StateHasChanged(); // Force UI update
+            StateHasChanged();
         }
         else
         {
@@ -227,15 +228,14 @@
             change = paidAmount - totalAmount;
             changeBreakdown = CalculateChangeBreakdown(change);
 
-            ResetCart();
+            cartItems.Clear();
             paidAmount = 0;
             change = 0;
+            totalAmount = 0;
             changeBreakdown.Clear();
 
-            // Close the modal using Bootstrap modal API
+            JSRuntime.InvokeVoidAsync("eval", "var modal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal')); if (modal) modal.hide();");
             StateHasChanged();
-            // Update the UI
-            JSRuntime.InvokeVoidAsync("eval", "new bootstrap.Modal(document.getElementById('checkoutModal')).hide()");
         }
         else
         {
