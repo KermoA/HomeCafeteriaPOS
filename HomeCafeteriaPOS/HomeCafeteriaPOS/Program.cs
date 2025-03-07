@@ -1,12 +1,13 @@
 using HomeCafeteriaPOS.Data;
 using HomeCafeteriaPOS.Hubs;
+using HomeCafeteriaPOS.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace HomeCafeteriaPOS
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
             // Add services to the container.
@@ -17,6 +18,8 @@ namespace HomeCafeteriaPOS
             builder.Services.AddSwaggerGen();
             builder.Services.AddDbContext<HomeCafeteriaDbContext>(options =>
                 options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+            builder.Services.AddScoped<ProductService>();
 
             builder.Services.AddSignalR();
 
@@ -31,6 +34,13 @@ namespace HomeCafeteriaPOS
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
+
+            using (var scope = app.Services.CreateScope())
+            {
+                var productService = scope.ServiceProvider.GetRequiredService<ProductService>();
+                await productService.LoadProductsAsync();
+            }
+
 
             app.UseCors("AllowAll");
 
