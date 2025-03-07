@@ -1,5 +1,6 @@
 ﻿@using Microsoft.AspNetCore.Components.Forms
 @using global::HomeCafeteriaPOS.Client.Models
+@inject HttpClient Http
 
 <EditForm Model="@EditingProduct" OnValidSubmit="HandleSave" class="needs-validation" novalidate>
     <DataAnnotationsValidator />
@@ -23,6 +24,15 @@
         <div class="invalid-feedback">Stock quantity is required.</div>
     </div>
 
+    <div class="mb-3">
+        <label for="ImageUrl" class="form-label">Image URL</label>
+        <input id="ImageUrl" type="text" @bind="EditingProduct.ImageUrl" class="form-control" placeholder="Enter image URL" />
+        @if (!string.IsNullOrEmpty(EditingProduct.ImageUrl))
+        {
+            <img src="@EditingProduct.ImageUrl" alt="Product Image" class="mt-3" style="max-width: 200px; max-height: 200px;" />
+        }
+    </div>
+
     <div class="d-flex justify-content-end gap-2 mt-4">
         <button type="submit" class="btn btn-primary">
             <i class="bi bi-check-circle me-1"></i> Save
@@ -32,7 +42,6 @@
         </button>
     </div>
 </EditForm>
-
 
 @code {
     [Parameter] public Product EditingProduct { get; set; } = new Product();
@@ -55,3 +64,4 @@
         }
     }
 }
+
