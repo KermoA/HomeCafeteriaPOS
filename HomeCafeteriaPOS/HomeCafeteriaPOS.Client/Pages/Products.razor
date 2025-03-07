@@ -8,44 +8,46 @@
     <h1 class="mb-4 text-center">Product Catalog</h1>
 
     <!-- Product Table -->
-    <div class="table-responsive">
-        <table class="table table-bordered table-hover align-middle">
-            <thead class="table-light">
-                <tr>
-                    <th>Name</th>
-                    <th>Price</th>
-                    <th>Stock Quantity</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (products?.Count > 0)
-                {
-                    @foreach (var product in products)
+    <div class="table-container">
+        <div class="table-responsive" style="max-height: 250px; overflow-y: auto; overflow-x: auto;">
+            <table class="table table-bordered table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Name</th>
+                        <th class="text-end">Price</th>
+                        <th class="text-end">Stock Quantity</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (products?.Count > 0)
+                    {
+                        @foreach (var product in products)
+                        {
+                            <tr>
+                                <td>@product.Name</td>
+                                <td class="text-end">@product.Price.ToString("C")</td>
+                                <td class="text-end">@product.Quantity</td>
+                                <td class="text-center">
+                                    <button @onclick="() => EditProduct(product)" class="btn btn-sm btn-warning me-2">
+                                        <i class="bi bi-pencil-square"></i> Edit
+                                    </button>
+                                    <button @onclick="() => DeleteProduct(product.Id)" class="btn btn-sm btn-danger">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
                     {
                         <tr>
-                            <td>@product.Name</td>
-                            <td>@product.Price.ToString("C")</td>
-                            <td>@product.Quantity</td>
-                            <td class="text-center">
-                                <button @onclick="() => EditProduct(product)" class="btn btn-sm btn-warning me-2">
-                                    <i class="bi bi-pencil-square"></i> Edit
-                                </button>
-                                <button @onclick="() => DeleteProduct(product.Id)" class="btn btn-sm btn-danger">
-                                    <i class="bi bi-trash"></i> Delete
-                                </button>
-                            </td>
+                            <td colspan="4" class="text-center text-muted">No products available</td>
                         </tr>
                     }
-                }
-                else
-                {
-                    <tr>
-                        <td colspan="4" class="text-center text-muted">No products available</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <!-- Add/Edit Product Form -->

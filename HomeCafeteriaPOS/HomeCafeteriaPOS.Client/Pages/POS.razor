@@ -10,67 +10,82 @@
 
     <!-- Product List -->
     <div class="row">
-        @foreach (var product in products)
-        {
-            <div class="col-md-3 mb-4">
-                <div class="card">
-                    <img src="@product.ImageUrl" class="card-img-top" alt="@product.Name"
-                         style="@(product.Quantity == 0 ? "filter: grayscale(100%);" : "")"
-                         @onclick="() => AddToCart(product)" />
-                    <div class="card-body">
-                        <h5 class="card-title">@product.Name</h5>
-                        <p class="card-text">@product.Price.ToString("C")</p>
-                        <p class="card-text">Stock: @product.Quantity</p>
+        <!-- Product List (Left) -->
+        <div class="col-md-8">
+            <div class="row">
+                @foreach (var product in products.OrderBy(p => p.Id))
+                {
+                    <div class="col-md-2 mb-4">
+                        <div class="card">
+                            <img src="@product.ImageUrl" class="card-img-top" alt="@product.Name"
+                                 style="@(product.Quantity == 0 ? "filter: grayscale(100%);" : "")"
+                                 @onclick="() => AddToCart(product)" />
+                            <div class="card-body">
+                                <h5 class="card-title">@product.Name</h5>
+                                <p class="card-text">@product.Price.ToString("C")</p>
+                                <p class="card-text">
+                                    @if (product.Quantity == 0)
+                                    {
+                                        <span style="color: red;">Out of Stock</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Stock: @product.Quantity</span>
+                                    }
+                                </p>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                }
             </div>
-        }
-    </div>
+        </div>
 
-    <!-- Cart List -->
-    <div class="mt-5">
-        <h3>Cart</h3>
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>Product</th>
-                    <th>Price</th>
-                    <th>Quantity</th>
-                    <th>Total</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (cartItems.Count > 0)
-                {
-                    @foreach (var item in cartItems)
-                    {
+        <!-- Cart (Right) -->
+        <div class="col-md-4">
+            <div class="card p-3">
+                <h3>Cart</h3>
+                <table class="table table-bordered">
+                    <thead>
                         <tr>
-                            <td>@item.Product.Name</td>
-                            <td>@item.Product.Price.ToString("C")</td>
-                            <td>@item.Quantity</td>
-                            <td>@(item.Product.Price * item.Quantity).ToString("C")</td>
-                            <td>
-                                <button @onclick="() => RemoveFromCart(item)" class="btn btn-sm btn-danger">Remove</button>
-                            </td>
+                            <th>Product</th>
+                            <th class="text-end">Qty</th>
+                            <th class="text-end">Total</th>
+                            <th class="text-center">Action</th>
                         </tr>
-                    }
-                }
-                else
-                {
-                    <tr>
-                        <td colspan="5" class="text-center text-muted">No items in the cart</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Total Amount and Checkout -->
-    <div class="mt-4 text-center">
-        <h3>Total: @totalAmount.ToString("C")</h3>
-        <button class="btn btn-warning" @onclick="ResetCart">Reset</button>
-        <button class="btn btn-success" @onclick="ProceedToCheckout">Checkout</button>
+                    </thead>
+                    <tbody>
+                        @if (cartItems.Count > 0)
+                        {
+                            @foreach (var item in cartItems)
+                            {
+                                <tr>
+                                    <td>@item.Product.Name</td>
+                                    <td class="text-end">@item.Quantity</td>
+                                    <td class="text-end">
+                                        @{
+                                            var totalPrice = item.Product.Price * item.Quantity;
+                                        }
+                                        <span>@totalPrice.ToString("C")</span>
+                                    </td>
+                                    <td>
+                                        <button @onclick="() => RemoveFromCart(item)" class="btn btn-sm btn-danger">X</button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">No items in the cart</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                <h4 class="text-center">Total: @totalAmount.ToString("C")</h4>
+                <button class="btn btn-warning w-100" @onclick="ResetCart">Reset</button>
+                <button class="btn btn-success w-100 mt-2" @onclick="ProceedToCheckout">Checkout</button>
+            </div>
+        </div>
     </div>
 
     <!-- Checkout Modal -->

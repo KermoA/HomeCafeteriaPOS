@@ -1,6 +1,6 @@
 ﻿<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">HomeCafeteriaPOS.Client</a>
+        <a class="navbar-brand" href="">Home Cafeteria</a>
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -33,12 +33,29 @@
 </div>
 
 @code {
-    private bool collapseNavMenu = true;
-
+    private bool collapseNavMenu = false;
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        Navigation.LocationChanged += HandleNavigationChanged;
+    }
+
+    private void HandleNavigationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        collapseNavMenu = false;
+        StateHasChanged();
+    }
 
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= HandleNavigationChanged;
     }
 }
