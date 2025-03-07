@@ -21,7 +21,6 @@ namespace HomeCafeteriaPOS.Services
 
             foreach (var product in products)
             {
-                // Check if the product already exists
                 if (!await _context.Products.AnyAsync(p => p.Id == product.Id))
                 {
                     _context.Products.Add(product);
