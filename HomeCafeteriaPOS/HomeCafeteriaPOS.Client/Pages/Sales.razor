@@ -18,14 +18,14 @@
         </tr>
     </thead>
     <tbody>
-        @foreach (var sale in sales)
+        @foreach (var sale in sales.OrderByDescending(s => s.Date))
         {
             <tr>
                 <td>@sale.Id</td>
-                <td>@sale.Date.ToLocalTime().ToString("g")</td>
-                <td>@sale.TotalAmount.ToString("C")</td>
-                <td>@sale.PaidAmount.ToString("C")</td>
-                <td>@sale.Change.ToString("C")</td>
+                <td>@sale.Date.ToLocalTime()</td>
+                <td>@sale.TotalAmount €</td>
+                <td>@sale.PaidAmount €</td>
+                <td>@sale.Change €</td>
                 <td>
                     <button class="btn btn-info" @onclick="() => ToggleSaleDetails(sale.Id)">View</button>
                 </td>
@@ -38,14 +38,13 @@
                             @foreach (var item in sale.Items)
                             {
                                 <li>
-                                    @item.Quantity x @item.ProductName - @item.Price.ToString("C")
-                                    (Total: @(item.Quantity * item.Price).ToString("C"))
+                                    @item.Quantity x @item.ProductName - @(item.Quantity * item.Price) €
                                 </li>
                             }
                         </ul>
-                        <p><strong>Total Amount:</strong> @sale.TotalAmount.ToString("C")</p>
-                        <p><strong>Paid Amount:</strong> @sale.PaidAmount.ToString("C")</p>
-                        <p><strong>Change:</strong> @sale.Change.ToString("C")</p>
+                        <p><strong>Total Amount:</strong> @sale.TotalAmount €</p>
+                        <p><strong>Paid Amount:</strong> @sale.PaidAmount €</p>
+                        <p><strong>Change:</strong> @sale.Change €</p>
                     </td>
                 </tr>
             }
@@ -54,16 +53,14 @@
 </table>
 
 @code {
-    private List<Sale> sales = new(); // This will hold the list of sales
+    private List<Sale> sales = new();
     private HubConnection? hubConnection;
-    private int? expandedSaleId; // To track which sale is expanded
+    private int? expandedSaleId;
 
     protected override async Task OnInitializedAsync()
     {
-        // Fetch sales from API
         sales = await Http.GetFromJsonAsync<List<Sale>>("https://localhost:7150/api/sales");
 
-        // Set up SignalR connection
         hubConnection = new HubConnectionBuilder()
             .WithUrl("https://localhost:7150/saleHub")
             .Build();
@@ -71,8 +68,8 @@
         // Listen for new sales
         hubConnection.On<Sale>("ReceiveNewSale", (sale) =>
         {
-            sales.Add(sale);  // Add new sale to the list
-            StateHasChanged(); // Refresh the UI
+            sales.Add(sale);
+            StateHasChanged();
         });
 
         await hubConnection.StartAsync();
@@ -80,11 +77,9 @@
 
     private void ToggleSaleDetails(int saleId)
     {
-        // If the clicked sale is already expanded, collapse it, otherwise expand it
         expandedSaleId = expandedSaleId == saleId ? (int?)null : saleId;
     }
 
-    // Dispose SignalR connection when done
     public async ValueTask DisposeAsync()
     {
         if (hubConnection is not null)
